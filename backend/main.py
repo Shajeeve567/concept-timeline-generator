@@ -3,7 +3,7 @@ from pydantic import BaseModel, Field
 import uvicorn
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from service import generate_roadmap, save_into_json
+from service import generate_roadmap
 import logging
 
 app = FastAPI(title="Geneology")
@@ -30,24 +30,23 @@ class RoadMapRequest(BaseModel):
     concept: str = Field(min_length=2)
 
 
-@app.post("/roadmap/{concept}")
-def search_term(concept: str):
-    try:
-        result = generate_roadmap(concept)
-        save_into_json(concept, result.model_dump_json(indent=2))
-        logging.info(f"🔮 Generating roadmap for '{concept}'")
-        return result
-    except Exception as e:
-        print(f"\n❌ ERROR: {e}")
-
-
 @app.post("/roadmap")
 def search_term(request: RoadMapRequest):
     try:
-        logging.info(f"🔮 Generating roadmap for '{request.concept}'")
         return generate_roadmap(request.concept)
     except HTTPException as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# @app.post("/roadmap/{concept}")
+# def search_term(concept: str):
+#     try:
+#         result = generate_roadmap(concept)
+#         save_into_json(concept, result.model_dump_json(indent=2))
+#         logging.info(f"🔮 Generating roadmap for '{concept}'")
+#         return result
+#     except Exception as e:
+#         print(f"\n❌ ERROR: {e}")
 
 
 if __name__ == "__main__":
