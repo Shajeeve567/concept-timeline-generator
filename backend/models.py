@@ -7,14 +7,8 @@ class RoadmapGallery(Base):
     __tablename__ = "gallery_roads"
 
     id = Column(Integer, primary_key=True, index=True)
-
-    # URL-friendly ID
     concept_slug = Column(String, unique=True, index=True, nullable=False)
-
     title = Column(String, nullable=False)
-
     graph_data = Column(JSONB, nullable=False)
-
-    views = Column(String, nullable=False)
-
+    views = Column(Integer, default=1)
     created_at = Column(DateTime(timezone=True), server_default=func.now())

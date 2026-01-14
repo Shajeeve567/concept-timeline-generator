@@ -44,31 +44,3 @@ async def generate_roadmap(concept: str):
     return await chain.ainvoke({"concept": concept})
 
 
-# def save_into_json(concept: str, response: str):
-#     try:
-#         with open(file_path / f"{concept}.json", "w") as f:
-#             f.write(response)
-#         print("\nSuccess!")
-#     except IOError as e:
-#         print(f"\nAn error occurred while writing to the file: {e}")
-
-
-# if __name__ == "__main__":
-#     test_concept = "Superman"
-
-#     print(f"Testing generation for : {test_concept}")
-
-#     print(f"""
-#         {RoadmapResponse.model_json_schema()}
-# """)
-
-#     try:
-#         result = generate_roadmap(test_concept)
-
-#         print("\n✅ SUCCESS! Here is the data:")
-#         print("------------------------------------------------")
-#         # print(result.model_dump_json(indent=2)) # Pretty print the JSON
-#         save_into_json(test_concept, result.model_dump_json(indent=2))
-#         print("------------------------------------------------")
-#     except Exception as e:
-#         print(f"\n❌ ERROR: {e}")

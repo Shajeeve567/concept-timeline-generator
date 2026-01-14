@@ -1,12 +1,27 @@
+from contextlib import asynccontextmanager
 import re
 from pydantic import BaseModel, Field
+from sqlalchemy import desc, select
 import uvicorn
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from service import generate_roadmap
+from database import AsyncSession, get_db, engine
+import models
 import logging
 
-app = FastAPI(title="Geneology")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    logging.info("🚀 Starting up: Creating database tables...")
+    async with engine.begin() as conn:
+        # This line actually builds "gallery_roadmaps" in Postgres
+        await conn.run_sync(models.Base.metadata.create_all) 
+    yield
+    logging.info("🛑 Shutting down...")
+
+
+app = FastAPI(title="Geneology", lifespan=lifespan)
 
 origins = [
     "http://localhost:3000"
@@ -20,7 +35,7 @@ app.add_middleware(
     allow_headers=["*"]
 )
 
-def slug(s: str) -> str:
+def create_slug(s: str) -> str:
     s = s.strip().lower()
     s = re.sub(r"[^a-z0-9]+", "-", s)
     return s.strip("-") or "concept"
@@ -30,23 +45,86 @@ class RoadMapRequest(BaseModel):
     concept: str = Field(min_length=2)
 
 
-@app.post("/roadmap")
-def search_term(request: RoadMapRequest):
+"""
+Depends(get_db): This tells FastAPI: "Before you run this function, go run get_db() from database.py. Wait for it to yield a session. Then, put that session into the variable db."
+
+db: AsyncSession: Now, inside your function, db is your open phone line to Postgres. You didn't have to write open() or connect(). It was handed to you on a silver platter.
+"""
+
+@app.get("/roadmap/recents")
+async def recent_searche(
+    limit: int = 10,
+    db: AsyncSession = Depends(get_db)
+):
     try:
-        return generate_roadmap(request.concept)
-    except HTTPException as e:
+        stmt = (
+            select(models.RoadmapGallery)
+            .order_by(desc(models.RoadmapGallery.views))
+            .limit(limit=limit)
+        )
+        
+        result = await db.execute(stmt)
+        roadmaps = result.scalars().all()
+
+        return [
+            {
+                "concept": item.title,
+                "slug": item.concept_slug,
+                "views": item.views,
+                "created_at": item.created_at
+            }
+            for item in roadmaps
+        ]
+
+    except Exception as e:
+        logging.error("Error fetching trending: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
-# @app.post("/roadmap/{concept}")
-# def search_term(concept: str):
-#     try:
-#         result = generate_roadmap(concept)
-#         save_into_json(concept, result.model_dump_json(indent=2))
-#         logging.info(f"🔮 Generating roadmap for '{concept}'")
-#         return result
-#     except Exception as e:
-#         print(f"\n❌ ERROR: {e}")
+
+
+
+@app.post("/roadmap")
+async def search_term(request: RoadMapRequest, db: AsyncSession = Depends(get_db)):
+    
+    concept = request.concept
+    slug = create_slug(concept)
+
+    try:
+        # Check the database
+        stmt = select(models.RoadmapGallery).where(models.RoadmapGallery.concept_slug == slug)
+        result = await db.execute(stmt)
+        cached_item = result.scalar_one_or_none()
+
+        if cached_item:
+            logging.info(f"⚡ Serving '{concept}' from DB Cache")
+            # Update view count
+            cached_item.views += 1
+            await db.commit()
+            return cached_item.graph_data
+        
+        # ask ai to generate the roadmap
+        logging.info(f"🔮 Generating '{concept}' via AI")
+
+        ai_result = await generate_roadmap(concept)
+
+        new_entry = models.RoadmapGallery(
+            concept_slug=slug,
+            title=concept,
+            # Pydantic object -> Python Dict for JSONB storage
+            graph_data=ai_result.model_dump(), 
+            views=1
+        )
+
+        db.add(new_entry)
+        await db.commit()
+        await db.refresh(new_entry)
+
+        return ai_result
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 
 if __name__ == "__main__":
