@@ -24,7 +24,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="Geneology", lifespan=lifespan)
 
 origins = [
-    "http://localhost:3000"
+    "http://localhost:5174"
 ]
 
 app.add_middleware(
@@ -51,7 +51,7 @@ Depends(get_db): This tells FastAPI: "Before you run this function, go run get_d
 db: AsyncSession: Now, inside your function, db is your open phone line to Postgres. You didn't have to write open() or connect(). It was handed to you on a silver platter.
 """
 
-@app.get("/roadmap/recents")
+@app.get("/roadmap/trending")
 async def recent_searche(
     limit: int = 10,
     db: AsyncSession = Depends(get_db)
