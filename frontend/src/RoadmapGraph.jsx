@@ -1,10 +1,18 @@
-import React, { useMemo } from 'react';
-import ReactFlow, { Background, Controls } from 'reactflow';
+import React, { useCallback, useEffect, useState } from 'react';
+import ReactFlow, { 
+  Background, 
+  Controls, 
+  MiniMap,
+  applyNodeChanges, 
+  applyEdgeChanges  
+} from 'reactflow';
 import 'reactflow/dist/style.css'; 
 import dagre from 'dagre';
 
+
 const nodeWidth = 172;
 const nodeHeight = 90;
+
 
 const getLayoutedElements = (nodes, edges) => {
   // 1. Initialize Graph
@@ -68,11 +76,30 @@ const getLayoutedElements = (nodes, edges) => {
   return { nodes: layoutedNodes, edges: validEdges };
 };
 
-const RoadmapGraph = ({ data }) => {
-  const { nodes: layoutedNodes, edges: layoutedEdges } = useMemo(() => {
-    if (!data) return { nodes: [], edges: [] };
 
-    // Transform Backend Data -> React Flow Objects
+
+
+const RoadmapGraph = ({ data }) => {
+
+  const [ nodes, setNodes ] = useState([])
+  const [ edges, setEdges ] = useState([])
+
+  const onNodesChange = useCallback(
+    (changes) => setNodes((nodesSnapshot) => applyNodeChanges(changes, nodesSnapshot)),
+    [],
+  );
+  const onEdgesChange = useCallback(
+    (changes) => setEdges((edgesSnapshot) => applyEdgeChanges(changes, edgesSnapshot)),
+    [],
+  );
+
+  useEffect(() => {
+    if(!data) {
+      setNodes([])
+      setEdges([])
+      return;
+    }
+
     const initialNodes = data.nodes.map((n) => ({
       id: String(n.id), // Ensure ID is string
       data: { label: n.label },
@@ -96,19 +123,33 @@ const RoadmapGraph = ({ data }) => {
       style: { stroke: '#555' }
     }));
 
-    return getLayoutedElements(initialNodes, initialEdges);
-  }, [data]);
+    const layout = getLayoutedElements(initialNodes, initialEdges)
+
+    setNodes(layout.nodes);
+    setEdges(layout.edges);
+
+  }, [data])
 
   return (
-    <div style={{ height: '600px', width: '100%', border: '1px solid #e0e0e0', borderRadius: '8px' }}>
+    <div style={{ width: '100%', height: '100%', border: '1px solid #e0e0e0', borderRadius: '8px' }}>
       <ReactFlow
-        nodes={layoutedNodes}
-        edges={layoutedEdges}
+        nodes={nodes}
+        edges={edges}
+        onNodesChange={onNodesChange}
+        onEdgesChange={onEdgesChange}
         fitView
+        
+        panOnScroll={true}
+        selectionOnDrag={true}
+        panOnDrag={true}
+        zoomOnScroll={true}
+        minZoom={0.1}
+
         attributionPosition="bottom-right"
       >
-        <Background color="#aaa" gap={16} />
+        <Background color="#aaa" gap={20} size={1} />
         <Controls />
+        <MiniMap nodeColor="#e2e2e2" maskColor="rgba(240, 240, 240, 0.6)" />
       </ReactFlow>
     </div>
   );

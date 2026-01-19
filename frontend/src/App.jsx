@@ -1,14 +1,15 @@
-import { useState, useEffect } from 'react'; // <--- Import useEffect
+import { useCallback, useState, useEffect } from 'react'; // <--- Import useEffect
 import { fetchRoadmap, fetchRecentRoadmaps } from './api'; // <--- Import new function
 import RoadmapGraph from './RoadmapGraph';
 import './App.css';
 
 function App() {
+  
+
   const [concept, setConcept] = useState("");
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  
   // New State for the Gallery
   const [recentTerms, setRecentTerms] = useState([]); 
 
@@ -48,56 +49,86 @@ function App() {
   };
 
   return (
-    <div className="container" style={{ padding: '20px', fontFamily: 'Arial, sans-serif' }}>
-      <h1>Genealogy of Ideas 🧬</h1>
+<div style={{ width: '100vw', height: '100vh', position: 'relative', overflow: 'hidden' }}>
       
-      {/* SEARCH BAR */}
-      <div className="search-box" style={{ marginBottom: '20px' }}>
-        <input 
-          type="text" 
-          value={concept} 
-          onChange={(e) => setConcept(e.target.value)}
-          placeholder="Enter concept (e.g., Bitcoin)"
-          style={{ padding: '10px', width: '300px', marginRight: '10px' }}
-        />
-        <button onClick={() => handleSearch()} disabled={loading} style={{ padding: '10px' }}>
-          {loading ? "Generating..." : "Generate Roadmap"}
-        </button>
+      {/* 2. Floating Header (Like a Toolbar) */}
+      <div style={{ 
+        position: 'absolute',    // Floats on top
+        top: 0, 
+        left: 0, 
+        right: 0,                // Stretches full width
+        zIndex: 10,              // Higher than canvas (1)
+        padding: '15px 30px', 
+        background: 'rgba(255, 255, 255, 0.9)', // Slight transparency
+        backdropFilter: 'blur(5px)',            // Nice blur effect
+        borderBottom: '1px solid #ddd', 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'space-between',
+        boxShadow: '0 2px 10px rgba(0,0,0,0.05)'
+      }}>
+        <h1 style={{ margin: 0, fontSize: '1.2rem', color: '#333' }}>Genealogy of Ideas 🧬</h1>
+        
+        <div style={{ display: 'flex', gap: '10px' }}>
+            <input 
+              type="text" 
+              value={concept} 
+              onChange={(e) => setConcept(e.target.value)}
+              placeholder="Search concept..."
+              style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ccc' }}
+            />
+            <button onClick={() => handleSearch()} disabled={loading} style={{ padding: '8px 16px', cursor: 'pointer' }}>
+              {loading ? "..." : "Generate"}
+            </button>
+        </div>
       </div>
 
-      {/* ERROR MESSAGE */}
-      {error && <p style={{ color: 'red' }}>{error}</p>}
-
-      {/* --- 2. THE GALLERY SECTION --- */}
-      {!data && !loading && (
-        <div style={{ marginTop: '20px' }}>
-          <h3>✨ Recently Generated (Gallery)</h3>
-          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-            {recentTerms.map((item) => (
-              <button 
-                key={item.slug} 
-                onClick={() => handleSearch(item.concept)}
-                style={{
-                  padding: '8px 15px',
-                  backgroundColor: '#e3f2fd',
-                  border: '1px solid #2196f3',
-                  borderRadius: '20px',
-                  cursor: 'pointer',
-                  color: '#1565c0'
-                }}
-              >
-                {item.concept} <span style={{fontSize: '0.8em', color: '#666'}}>({item.views})</span>
-              </button>
-            ))}
-          </div>
+{/* 3. ERROR MESSAGE (Floating) */}
+      {error && (
+        <div style={{ position: 'absolute', top: '80px', left: '50%', transform: 'translateX(-50%)', zIndex: 20, background: '#ffdddd', padding: '10px', borderRadius: '5px' }}>
+          <p style={{ margin: 0, color: 'red' }}>{error}</p>
         </div>
       )}
 
-      {/* GRAPH DISPLAY */}
-      {data && (
-        <div className="graph-container" style={{ marginTop: '20px' }}>
+      {/* 4. CANVAS LAYER (The Base) */}
+      {/* If we have data, show the graph. It fills the parent (100vh) */}
+      {data ? (
+        <div style={{ width: '100%', height: '100%', zIndex: 1 }}>
            <RoadmapGraph data={data} />
         </div>
+      ) : (
+        /* 5. EMPTY STATE / GALLERY (Centered in the middle of the screen) */
+        !loading && (
+          <div style={{ 
+            height: '100%', 
+            display: 'flex', 
+            flexDirection: 'column', 
+            justifyContent: 'center', 
+            alignItems: 'center',
+            backgroundColor: '#f9f9f9'
+          }}>
+            <h3 style={{ color: '#555' }}>Start your journey</h3>
+            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', maxWidth: '600px', justifyContent: 'center', marginTop: '20px' }}>
+              {recentTerms.map((item) => (
+                <button 
+                  key={item.slug} 
+                  onClick={() => handleSearch(item.concept)}
+                  style={{
+                    padding: '10px 20px',
+                    backgroundColor: '#fff',
+                    border: '1px solid #ddd',
+                    borderRadius: '30px',
+                    cursor: 'pointer',
+                    boxShadow: '0 2px 5px rgba(0,0,0,0.05)',
+                    transition: 'transform 0.1s'
+                  }}
+                >
+                  {item.concept}
+                </button>
+              ))}
+            </div>
+          </div>
+        )
       )}
     </div>
   );

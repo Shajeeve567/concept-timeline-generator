@@ -24,7 +24,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="Geneology", lifespan=lifespan)
 
 origins = [
-    "http://localhost:5174"
+    "http://localhost:5173"
 ]
 
 app.add_middleware(
