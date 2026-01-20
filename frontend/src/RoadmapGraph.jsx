@@ -8,7 +8,8 @@ import ReactFlow, {
 } from 'reactflow';
 import 'reactflow/dist/style.css'; 
 import dagre from 'dagre';
-
+import Modal from './Modal';
+import './Modal.css';
 
 const nodeWidth = 172;
 const nodeHeight = 90;
@@ -84,6 +85,8 @@ const RoadmapGraph = ({ data }) => {
   const [ nodes, setNodes ] = useState([])
   const [ edges, setEdges ] = useState([])
 
+  const [selectedNode, setSelectedNode] = useState(null)
+
   const onNodesChange = useCallback(
     (changes) => setNodes((nodesSnapshot) => applyNodeChanges(changes, nodesSnapshot)),
     [],
@@ -92,6 +95,14 @@ const RoadmapGraph = ({ data }) => {
     (changes) => setEdges((edgesSnapshot) => applyEdgeChanges(changes, edgesSnapshot)),
     [],
   );
+  const onNodeClick = useCallback((event, node) => {
+    // console.log([...data['nodes'].map((d) => d.id == 'ai-origin'? d.details: null)][0], " <-here")
+    setSelectedNode([...data['nodes'].map((d) => d.id == 'ai-origin'? d: null)][0])
+  }, [])
+
+  const handleCloseModal = () => {
+    setSelectedNode(null)
+  }
 
   useEffect(() => {
     if(!data) {
@@ -131,12 +142,27 @@ const RoadmapGraph = ({ data }) => {
   }, [data])
 
   return (
+    <>
     <div style={{ width: '100%', height: '100%', border: '1px solid #e0e0e0', borderRadius: '8px' }}>
+      {selectedNode && (
+          <Modal handleCloseModal={handleCloseModal}>
+              {console.log("Node pressed!")}
+              <div className="modal-header">
+                  <h3 className="modal-title">{selectedNode.label}</h3>
+                  {/* {console.log(selectedNode)} */}
+                  <button onClick={handleCloseModal} className="modal-close-btn">&times;</button>
+              </div>
+              <div style={{ lineHeight: '1.6', color: '#555' }}>
+                  {selectedNode.details}
+              </div>
+          </Modal>
+      )}
       <ReactFlow
         nodes={nodes}
         edges={edges}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
+        onNodeClick={onNodeClick}
         fitView
         
         panOnScroll={true}
@@ -152,6 +178,8 @@ const RoadmapGraph = ({ data }) => {
         <MiniMap nodeColor="#e2e2e2" maskColor="rgba(240, 240, 240, 0.6)" />
       </ReactFlow>
     </div>
+
+    </>
   );
 };
 

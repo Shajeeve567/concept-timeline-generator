@@ -13,6 +13,10 @@ function App() {
   // New State for the Gallery
   const [recentTerms, setRecentTerms] = useState([]); 
 
+
+  const [showDetails, setShowDetails] = useState(null);
+
+
   // --- 1. LOAD GALLERY ON STARTUP ---
   useEffect(() => {
     // This function runs automatically when the page loads
