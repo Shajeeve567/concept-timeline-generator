@@ -96,8 +96,9 @@ const RoadmapGraph = ({ data }) => {
     [],
   );
   const onNodeClick = useCallback((event, node) => {
-    // console.log([...data['nodes'].map((d) => d.id == 'ai-origin'? d.details: null)][0], " <-here")
-    setSelectedNode([...data['nodes'].map((d) => d.id == 'ai-origin'? d: null)][0])
+    // console.log([...data['nodes'].map((d) => d.id == node['id']? node: node)], " <-here")
+    setSelectedNode([...data['nodes'].map((d) => d.id === node.id ? d : null)].filter((n) => n !== null ? n : null)[0])
+    console.log(selectedNode)
   }, [])
 
   const handleCloseModal = () => {
@@ -149,7 +150,7 @@ const RoadmapGraph = ({ data }) => {
               {console.log("Node pressed!")}
               <div className="modal-header">
                   <h3 className="modal-title">{selectedNode.label}</h3>
-                  {/* {console.log(selectedNode)} */}
+                  {console.log(selectedNode)}
                   <button onClick={handleCloseModal} className="modal-close-btn">&times;</button>
               </div>
               <div style={{ lineHeight: '1.6', color: '#555' }}>
