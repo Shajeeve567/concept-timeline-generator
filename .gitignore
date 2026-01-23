@@ -12,3 +12,5 @@ wheels/
 
 backend/data/*
 frontend/node_modules/*
+backend/serviceAccountKey.json
+backend/auth.py

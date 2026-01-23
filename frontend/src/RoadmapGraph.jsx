@@ -99,7 +99,7 @@ const RoadmapGraph = ({ data }) => {
     // console.log([...data['nodes'].map((d) => d.id == node['id']? node: node)], " <-here")
     setSelectedNode([...data['nodes'].map((d) => d.id === node.id ? d : null)].filter((n) => n !== null ? n : null)[0])
     console.log(selectedNode)
-  }, [])
+  }, [data])
 
   const handleCloseModal = () => {
     setSelectedNode(null)
@@ -173,6 +173,7 @@ const RoadmapGraph = ({ data }) => {
         minZoom={0.1}
 
         attributionPosition="bottom-right"
+        proOptions={{ hideAttribution: true }}
       >
         <Background color="#aaa" gap={20} size={1} />
         <Controls />
