@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom'; // Hook for navigation
-import { fetchRecentRoadmaps } from './api';
+import { fetchRecentRoadmaps } from '../api';
 
 const Home = () => {
   const [concept, setConcept] = useState("");
