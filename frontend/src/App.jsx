@@ -2,8 +2,8 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 
 // Import the two pages we just created
-import Home from './Home';
-import RoadmapPage from './RoadmapPage';
+import Home from './components/Home';
+import RoadmapPage from './components/RoadmapPage';
 
 // Import CSS if you have global styles (optional)
 import './App.css';

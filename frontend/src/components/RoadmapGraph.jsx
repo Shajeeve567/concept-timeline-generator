@@ -9,7 +9,7 @@ import ReactFlow, {
 import 'reactflow/dist/style.css'; 
 import dagre from 'dagre';
 import Modal from './Modal';
-import './Modal.css';
+import '../Modal.css';
 
 const nodeWidth = 172;
 const nodeHeight = 90;
@@ -87,6 +87,8 @@ const RoadmapGraph = ({ data }) => {
 
   const [selectedNode, setSelectedNode] = useState(null)
 
+  const [edgeTooltip, setEdgeTooltip] = useState(null); // { x, y, label }
+
   const onNodesChange = useCallback(
     (changes) => setNodes((nodesSnapshot) => applyNodeChanges(changes, nodesSnapshot)),
     [],
@@ -103,6 +105,20 @@ const RoadmapGraph = ({ data }) => {
 
   const handleCloseModal = () => {
     setSelectedNode(null)
+  }
+
+  const onEdgeMouseEnter = (event, edge) => {
+    if (edge.data && edge.data.label) {
+      setEdgeTooltip({
+        x: event.clientX,
+        y: event.clientY,
+        label: edge.data.label
+      })
+    }
+  }
+  
+  const onEdgeMouseLeave = () => {
+    setEdgeTooltip(null);
   }
 
   useEffect(() => {
@@ -131,8 +147,15 @@ const RoadmapGraph = ({ data }) => {
       id: `${e.source}-${e.target}`,
       source: String(e.source),
       target: String(e.target),
+      // label: String(e.label),
+      data: {
+        label: e.label
+      },
       animated: true,
-      style: { stroke: '#555' }
+      style: { stroke: '#555'}, 
+      interactionWidth: 20,
+      labelStyle: { fill: '#555', fontWeight: 700, fontSize: 12 },
+      labelBgStyle: { fill: '#fff', fillOpacity: 0.7 },
     }));
 
     const layout = getLayoutedElements(initialNodes, initialEdges)
@@ -164,6 +187,10 @@ const RoadmapGraph = ({ data }) => {
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onNodeClick={onNodeClick}
+
+        onEdgeMouseEnter={onEdgeMouseEnter}
+        onEdgeMouseLeave={onEdgeMouseLeave}
+
         fitView
         
         panOnScroll={true}
@@ -179,6 +206,45 @@ const RoadmapGraph = ({ data }) => {
         <Controls />
         <MiniMap nodeColor="#e2e2e2" maskColor="rgba(240, 240, 240, 0.6)" />
       </ReactFlow>
+      {/* 👇 RENDER THE TOOLTIP OVERLAY */}
+      {edgeTooltip && (
+        <div style={{
+          position: 'fixed',
+          top: edgeTooltip.y - 45, // Position above cursor
+          left: edgeTooltip.x,
+          transform: 'translateX(-50%)', // Center horizontally over cursor
+          zIndex: 100,
+          pointerEvents: 'none', // Lets clicks pass through to the graph
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center'
+        }}>
+           {/* 1. The Main White Box */}
+           <div style={{
+             backgroundColor: 'white',
+             color: '#333',
+             padding: '6px 12px',
+             borderRadius: '6px',
+             fontSize: '12px',
+             fontWeight: '500',
+             boxShadow: '0 4px 12px rgba(0,0,0,0.15), 0 1px 3px rgba(0,0,0,0.1)',
+             whiteSpace: 'nowrap'
+           }}>
+             {edgeTooltip.label}
+           </div>
+
+           {/* 2. The Down Arrow (CSS Triangle) */}
+           <div style={{
+              width: 0, 
+              height: 0, 
+              // This creates a triangle pointing down
+              borderLeft: '8px solid transparent',
+              borderRight: '8px solid transparent',
+              borderTop: '8px solid white', // Must match the box color
+              marginTop: '-1px' // Slight overlap to prevent tiny gaps
+           }}></div>
+        </div>
+      )}
     </div>
 
     </>
