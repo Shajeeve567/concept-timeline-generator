@@ -5,10 +5,11 @@ from sqlalchemy import desc, select
 import uvicorn
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from service import generate_roadmap
+from service import generate_roadmap, expand_node
 from database import AsyncSession, get_db, engine
 import models
 import logging
+import traceback
 
 
 @asynccontextmanager
@@ -40,9 +41,15 @@ def create_slug(s: str) -> str:
     s = re.sub(r"[^a-z0-9]+", "-", s)
     return s.strip("-") or "concept"
 
-
+# To send inputs as json, we use pydantic models as the function parameters
 class RoadMapRequest(BaseModel):
     concept: str = Field(min_length=2)
+
+class ExpandRequest(BaseModel):
+    concept: str
+    parent_node: str
+    parent_id: str
+    context_type: str
 
 
 """
@@ -52,8 +59,8 @@ db: AsyncSession: Now, inside your function, db is your open phone line to Postg
 """
 
 @app.get("/roadmap/trending")
-async def recent_searche(
-    limit: int = 10,
+async def recent_search(
+    limit: int = 20,
     db: AsyncSession = Depends(get_db)
 ):
     try:
@@ -106,7 +113,12 @@ async def search_term(request: RoadMapRequest, db: AsyncSession = Depends(get_db
         # ask ai to generate the roadmap
         logging.info(f"🔮 Generating '{concept}' via AI")
 
-        ai_result = await generate_roadmap(concept)
+        try:
+            ai_result = await generate_roadmap(request.concept)
+        except Exception as e:
+            print("🔥 BACKEND ERROR 🔥")
+            traceback.print_exc()
+            raise HTTPException(status_code=500, detail=str(e))
 
         new_entry = models.RoadmapGallery(
             concept_slug=slug,
@@ -125,6 +137,24 @@ async def search_term(request: RoadMapRequest, db: AsyncSession = Depends(get_db
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
+@app.post("/expand")
+async def expand(request: ExpandRequest):
+    try:
+        logging.info("Expanding node '{request.parent_node}' ({request.context_type})")
+
+        new_subgraph = await expand_node(
+            concept=request.concept,
+            parent_node=request.parent_node,
+            parent_id=request.parent_id,
+            context_type=request.context_type
+        )
+        
+        return new_subgraph
+
+    except Exception as e:
+        logging.error(f"Error expanding node: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 if __name__ == "__main__":

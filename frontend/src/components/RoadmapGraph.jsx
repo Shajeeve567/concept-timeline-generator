@@ -10,10 +10,14 @@ import 'reactflow/dist/style.css';
 import dagre from 'dagre';
 import Modal from './Modal';
 import '../Modal.css';
+import CustomNode from './CustomNode';
 
 const nodeWidth = 172;
 const nodeHeight = 90;
 
+const nodeTypes = {
+  custom: CustomNode,
+};
 
 const getLayoutedElements = (nodes, edges) => {
   // 1. Initialize Graph
@@ -78,9 +82,7 @@ const getLayoutedElements = (nodes, edges) => {
 };
 
 
-
-
-const RoadmapGraph = ({ data }) => {
+const RoadmapGraph = ({ data, concept }) => {
 
   const [ nodes, setNodes ] = useState([])
   const [ edges, setEdges ] = useState([])
@@ -88,6 +90,78 @@ const RoadmapGraph = ({ data }) => {
   const [selectedNode, setSelectedNode] = useState(null)
 
   const [edgeTooltip, setEdgeTooltip] = useState(null); // { x, y, label }
+
+  const handleExpandNode = useCallback(async (nodeId, nodeLabel, nodeType) => {
+    console.log(`Expanding ${nodeLabel} (${nodeType})...`);
+
+    try {
+      const response = await fetch('http://localhost:8000/expand', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          concept: concept || data?.nodes[0]?.label,
+          parent_node: nodeLabel,
+          parent_id: nodeId,
+          context_type: nodeType
+        })
+      })
+
+      const newSubgraph = await response.json();
+
+      if (!newSubgraph.nodes || newSubgraph.nodes.length === 0) return;
+
+      // Format new nodes to match ReactFlow structure
+      const newFlowNodes = newSubgraph.nodes.map(n => ({
+        id: String(n.id),
+        type: 'custom',
+        data: { 
+          label: n.label, 
+          type: n.type, 
+          tag: n.tag,
+          details: n.details,
+          onExpand: handleExpandNode // Pass function recursively
+        },
+        position: { x: 0, y: 0 }
+      }));
+
+      const newFlowEdges = newSubgraph.edges.map(e => ({
+        id: `${e.source}-${e.target}`,
+        source: String(e.source),
+        target: String(e.target),
+        data: { label: e.label },
+        animated: true,
+        style: { stroke: '#555' },
+        interactionWidth: 20,
+      }))
+
+// Update State & Re-Layout
+      setNodes((nds) => {
+        const allNodes = [...nds, ...newFlowNodes];
+        const currentEdges = edges; // Access current edges via closure or ref if needed
+        // Note: For perfect layout, we usually need the latest edges here too.
+        // We will trigger layout in a separate effect or immediately here:
+        return allNodes; 
+      });
+
+      setEdges((eds) => {
+        const allEdges = [...eds, ...newFlowEdges];
+        
+        // RE-LAYOUT everything
+        // We use the functional update of setNodes to ensure we have latest nodes
+        setNodes(prevNodes => {
+           const { nodes: reLayoutedNodes } = getLayoutedElements([...prevNodes], allEdges);
+           return reLayoutedNodes;
+        });
+        
+        const { edges: reLayoutedEdges } = getLayoutedElements(nodes, allEdges); // Dummy call just to get edges if needed
+        return allEdges; 
+      });
+
+    } catch (error) {
+      console.error("Expansion failed:", error);
+    }
+  }, [concept, data, edges, nodes, setNodes, setEdges]);
+
 
   const onNodesChange = useCallback(
     (changes) => setNodes((nodesSnapshot) => applyNodeChanges(changes, nodesSnapshot)),
@@ -129,19 +203,19 @@ const RoadmapGraph = ({ data }) => {
     }
 
     const initialNodes = data.nodes.map((n) => ({
-      id: String(n.id), // Ensure ID is string
-      data: { label: n.label },
-      position: { x: 0, y: 0 },
-      style: { 
-        background: n.type === 'origin' ? '#ffebee' : '#fff',
-        border: '1px solid #777',
-        borderRadius: '5px',
-        padding: '10px',
-        fontSize: '12px',
-        textAlign: 'center',
-        width: nodeWidth 
-      }
-    }));
+          id: String(n.id),
+          type: 'custom', // 👈 IMPORTANT: This activates CustomNode.jsx
+          data: { 
+            label: n.label,
+            type: n.type,   // 👈 Pass 'root', 'core', or 'path' for colors
+            tag: n.tag,
+            details: n.details,
+            onExpand: handleExpandNode // 👈 Pass the function so the button works!
+          },
+          position: { x: 0, y: 0 },
+          // Note: We removed the 'style' object here because CustomNode.jsx 
+          // handles its own styling (colors, borders) based on the type.
+        }));
 
     const initialEdges = data.edges.map((e) => ({
       id: `${e.source}-${e.target}`,
@@ -190,7 +264,7 @@ const RoadmapGraph = ({ data }) => {
 
         onEdgeMouseEnter={onEdgeMouseEnter}
         onEdgeMouseLeave={onEdgeMouseLeave}
-
+        nodeTypes={nodeTypes}
         fitView
         
         panOnScroll={true}

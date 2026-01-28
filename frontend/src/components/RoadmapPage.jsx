@@ -110,7 +110,7 @@ const RoadmapPage = () => {
 
         {/* The Graph */}
         {!loading && !error && data && (
-           <RoadmapGraph data={data} />
+           <RoadmapGraph data={data} concept={concept}/>
         )}
       </div>
     </div>
