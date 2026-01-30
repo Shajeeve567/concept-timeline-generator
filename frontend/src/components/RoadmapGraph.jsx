@@ -23,7 +23,11 @@ const getLayoutedElements = (nodes, edges) => {
   // 1. Initialize Graph
   // We enable 'multigraph' to prevent crashes if the AI generates duplicate edges
   const dagreGraph = new dagre.graphlib.Graph({ multigraph: true });
-  dagreGraph.setGraph({ rankdir: 'LR' }); 
+  dagreGraph.setGraph({ 
+      rankdir: 'LR', 
+      ranksep: 150, // 2. HUGE GAP horizontally (was default ~50)
+      nodesep: 100  // 3. Bigger gap vertically
+    });
 
   // 2. Add Nodes (Force IDs to string to be safe)
   nodes.forEach((node) => {
@@ -106,7 +110,12 @@ const RoadmapGraph = ({ data, concept }) => {
         })
       })
 
+
       const newSubgraph = await response.json();
+
+      console.log("New Nodes: ", newSubgraph.nodes);
+      console.log("New Edges: ", newSubgraph.edges);
+      
 
       if (!newSubgraph.nodes || newSubgraph.nodes.length === 0) return;
 
@@ -173,7 +182,12 @@ const RoadmapGraph = ({ data, concept }) => {
   );
   const onNodeClick = useCallback((event, node) => {
     // console.log([...data['nodes'].map((d) => d.id == node['id']? node: node)], " <-here")
-    setSelectedNode([...data['nodes'].map((d) => d.id === node.id ? d : null)].filter((n) => n !== null ? n : null)[0])
+    setSelectedNode({
+        label: node.data.label,
+        details: node.data.details, // This was missing because we looked in the wrong place
+        type: node.data.type,
+        tag: node.data.tag
+    });
     console.log(selectedNode)
   }, [data])
 
@@ -215,7 +229,7 @@ const RoadmapGraph = ({ data, concept }) => {
           position: { x: 0, y: 0 },
           // Note: We removed the 'style' object here because CustomNode.jsx 
           // handles its own styling (colors, borders) based on the type.
-        }));
+    }));
 
     const initialEdges = data.edges.map((e) => ({
       id: `${e.source}-${e.target}`,
@@ -228,7 +242,7 @@ const RoadmapGraph = ({ data, concept }) => {
       animated: true,
       style: { stroke: '#555'}, 
       interactionWidth: 20,
-      labelStyle: { fill: '#555', fontWeight: 700, fontSize: 12 },
+      labelStyle: { fill: '#555555', fontWeight: 700, fontSize: 12 },
       labelBgStyle: { fill: '#fff', fillOpacity: 0.7 },
     }));
 
